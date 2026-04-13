@@ -1,7 +1,7 @@
 [project]
 name = "langchain-course"
 version = "0.1.0"
-description = "Add your description here"
+description = "Demo ongoing undertaking using langchain-langgraph"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
