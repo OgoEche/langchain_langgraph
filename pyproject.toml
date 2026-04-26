@@ -1,7 +1,7 @@
 [project]
 name = "agents-under-the-hood"
 version = "0.1.0"
-description = "Add your description here"
+description = "Demonstration of ReAct from highlevel abstraction to lower level function and prompt implementation"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
