@@ -1,0 +1,11 @@
+{
+  "dockerfile_lines": [],
+  "graphs": {
+    "travel_info_agent": "./main.py:travel_info_agent"
+
+  },
+  "env": "./.env",
+  "dependencies": [
+    "."
+  ]
+}

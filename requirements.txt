@@ -1,0 +1,15 @@
+langgraph
+langchain
+langchain-openai
+langchain-community
+langchain-chroma
+chromadb
+aiohttp
+tiktoken
+beautifulsoup4
+html2text
+python-dotenv
+langgraph-supervisor
+fastmcp
+langchain-mcp-adapters
+lxml
