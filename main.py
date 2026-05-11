@@ -1,7 +1,10 @@
+import random
+import requests
+
 from dotenv import load_dotenv
 import os
 import operator
-from typing import Annotated, Sequence, TypedDict
+from typing import Annotated, Literal, Optional, Sequence, TypedDict
 import json
 import asyncio
 
@@ -9,7 +12,7 @@ from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 
 from langgraph.graph import StateGraph, START, END
@@ -42,49 +45,6 @@ UK_DESTINATIONS = [
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 
 # Preparing the travel information vector store
-
-# async def build_travel_info_vector_store(destinations: Sequence[str]) -> Chroma:
-#     """Download Wikipedia pages and create a Chroma vector store."""
-
-#     headers = {"User-Agent": "TravelBot/1.0 (educational; contact test@example.com)"}
-#     converter = html2text.HTML2Text()
-#     converter.ignore_links = True
-
-#     documents = []
-#     print("Downloading destination pages ...")
-
-#     async with aiohttp.ClientSession(headers=headers) as session:
-#         for slug in destinations:
-#             params = {
-#                 "action": "parse",
-#                 "page": slug,
-#                 "prop": "text",
-#                 "format": "json"
-#             }
-#             async with session.get(WIKIPEDIA_API, params=params) as response:
-#                 data = await response.json()
-#                 if "error" in data:
-#                     print(f"Skipping {slug}: {data['error']}")
-#                     continue
-#                 html = data["parse"]["text"]["*"]
-#                 plain_text = converter.handle(html)
-#                 documents.append(Document(
-#                     page_content=plain_text,
-#                     metadata={"source": f"https://en.wikipedia.org/wiki/{slug}"}
-#                 ))
-                
-
-#     # Split the documents into chunks
-#     splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=128)
-#     chunks = sum([splitter.split_documents([d]) for d in documents], [])
-
-#     # Create embeddings for the chunks
-#     print(f"Embedding {len(chunks)} chunks ...")
-#     embeddings = OpenAIEmbeddings(model="text-embedding-3-small", dimensions=1024)
-#     vector_store = Chroma.from_documents(chunks, embeddings)
-
-#     return vector_store
-
 async def build_travel_info_vector_store(destinations: Sequence[str]) -> Chroma:
     """Download Wikipedia pages and create a Chroma vector store."""
 
@@ -175,11 +135,74 @@ def search_travel_info(query: str) -> str:
     
     return "\n---\n".join(d.page_content for d in top)
 
+# simulate real-time weather data for any given town
+class WeatherForecast(TypedDict):
+    town: str
+    weather:  Literal["sunny", "foggy", "rainy", "windy"]
+    temperature: int
+
+class WeatherForecastService:
+    """A mock weather forecast service that returns random weather data for a given town."""
+    _weather_options = ["sunny", "foggy", "rainy", "windy"]
+    _temp_min = 18
+    _temp_max = 31
+
+    @classmethod
+    def get_forecast(cls, town: str) -> Optional[WeatherForecast]:
+        weather = random.choice(cls._weather_options)
+        temperature = random.randint(cls._temp_min, cls._temp_max)
+        return WeatherForecast(town=town, weather=weather, temperature=temperature)
+
+
+@tool(description="Get the weather forecast, given a town name.")
+def weather_forecast(town: str) -> dict:
+    """Get a mock weather forecast for a given town. Returns a
+     WeatherForecast object with weather and temperature."""
+    forecast = WeatherForecastService.get_forecast(town)
+    return {"error": f"No weather data available for '{town}'."} if forecast is None else forecast
+
+
+@tool(description="Get the current weather for a specified location.")
+def get_weather(location: str) -> str:
+    """Get current weather for a specific city or town.
+    Input must be a single place name, e.g. 'St Ives' or 'Newquay'.
+    Do NOT pass descriptions or multiple locations — call once per place."""
+    try:
+        geo = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": location, "count": 1}
+        ).json()
+        
+        if "results" not in geo or not geo["results"]:
+            return f"Could not find coordinates for '{location}'. Try a more specific city name."
+        
+        lat = geo["results"][0]["latitude"]
+        lon = geo["results"][0]["longitude"]
+        name = geo["results"][0].get("name", location)
+        
+        weather = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={"latitude": lat, "longitude": lon, "current_weather": True}
+        ).json()
+        
+        cw = weather["current_weather"]
+        return (
+            f"Weather in {name}: {cw['temperature']}°C, "
+            f"Wind: {cw['windspeed']} km/h, "
+            f"Code: {cw['weathercode']}"
+        )
+    except Exception as e:
+        return f"Weather lookup failed for '{location}': {e}"
+   
 
 # configure LLM with tool awareness
-TOOLS = [search_travel_info]
+TOOLS = [search_travel_info,
+         #weather_forecast,
+         get_weather,
+        ]
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+#llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="openai/qwen3.5-4b", base_url="http://127.0.0.1:1234/v1", api_key="lm-studio")
 llm_with_tools = llm.bind_tools(TOOLS)
 
 # Initialize the dependences for the Langgraph graph
@@ -226,12 +249,18 @@ tools_execution_node = ToolsExecutionNode(TOOLS)
 # LLM node
 # A node function that passes the current message history to the LLM and returns its response.
 # The LLM decides at this point whether to call a tool or produce a final answer.
-def llm_node(state: AgentState):  
+def llm_node(state: AgentState):
     """LLM node that decides whether to call the search tool."""
-    current_messages = state["messages"] 
-    respose_message = llm_with_tools.invoke(current_messages)
+    current_messages = state["messages"]
+    system_message = SystemMessage(content="""You are a helpful assistant 
+    that can search travel information and get the weather forecast. 
+    Only use the tools to find the information 
+    you need (including town names).""")
 
-    return {"messages": [respose_message]}
+    current_messages.append(system_message)
+    response_message = llm_with_tools.invoke(current_messages)
+
+    return {"messages": [response_message]}
 
 
 # Build the LangGraph graph (llm_node + CustomToolNode)
