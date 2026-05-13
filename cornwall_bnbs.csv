@@ -1,0 +1,31 @@
+bnb_id,bnb_name,town,available_rooms,price_per_room
+1,Seaside BnB,Newquay,3,80.0
+2,Surfside Guesthouse,Newquay,2,85.0
+3,Harbour View BnB,Falmouth,4,78.0
+4,Seafarer's Rest,Falmouth,1,90.0
+5,Garden Gate BnB,St Austell,2,82.0
+6,Coastal Cottage BnB,St Austell,3,88.0
+7,Penzance Pier BnB,Penzance,2,95.0
+8,Cornish Charm BnB,Penzance,3,87.0
+9,Camborne Corner BnB,Camborne,2,75.0
+10,Rose Cottage BnB,Camborne,2,79.0
+11,Hayle Haven BnB,Hayle,3,83.0
+12,Dune View BnB,Hayle,1,81.0
+13,Land's End Lookout BnB,Land's End,2,100.0
+14,Atlantic Edge BnB,Land's End,2,105.0
+15,Bude Beach BnB,Bude,2,77.0
+16,Cliffside BnB,Bude,3,80.0
+17,Padstow Harbour BnB,Padstow,2,92.0
+18,Fisherman's Rest BnB,Padstow,2,89.0
+19,St Ives Bay BnB,St Ives,3,97.0
+20,Artists' Retreat BnB,St Ives,2,102.0
+21,Looe Riverside BnB,Looe,2,84.0
+22,Harbour Lights BnB,Looe,2,86.0
+23,Polperro Cove BnB,Polperro,2,91.0
+24,Smuggler's Rest BnB,Polperro,2,93.0
+25,Mevagissey Harbour BnB,Mevagissey,2,90.0
+26,Seafarer's BnB,Mevagissey,2,88.0
+27,Port Isaac View BnB,Port Isaac,2,99.0
+28,Fisherman's Cottage BnB,Port Isaac,2,101.0
+29,Fowey Quay BnB,Fowey,2,94.0
+30,Riverside Rest BnB,Fowey,2,96.0
