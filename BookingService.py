@@ -1,4 +1,4 @@
-import csv
+import csv, os
 from typing import Dict, List, TypedDict
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -34,7 +34,10 @@ class BnBBookingService:
         hotel_db_toolkit = SQLDatabaseToolkit(db=hotel_db, llm=BnBBookingService.llm_model)
         BnBBookingService.hotel_db_toolkit_tools = hotel_db_toolkit.get_tools()
 
-        with open("manning_works\\ai_agents_apps_langchain_graphs\\travel_infor_agents_app\\cornwall_bnbs.csv") as f:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_path = os.path.join(script_dir, "cornwall_bnbs.csv")
+
+        with open(csv_path) as f:
             mock_bnb_offers = list(csv.DictReader(f))
 
         for b in mock_bnb_offers:
